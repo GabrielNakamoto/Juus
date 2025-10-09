@@ -16,9 +16,10 @@ enum PkarrRelay {
 	Iroh
 }
 
-/*
 struct JuPeer {
-}*/
+	username: String,
+	pubkey: iroh::PublicKey
+}
 
 struct JuNode {
 	secret_key: iroh::SecretKey,
@@ -39,7 +40,9 @@ struct Member {
 
 impl JuNode {
 	fn build_discovery(relay: PkarrRelay) -> iroh::discovery::pkarr::dht::Builder {
-		let builder = iroh::discovery::pkarr::dht::DhtDiscovery::builder();
+		use iroh::discovery::pkarr::dht::DhtDiscovery;
+
+		let builder = DhtDiscovery::builder();
 		match relay {
 			PkarrRelay::Disabled => builder,
 			PkarrRelay::Iroh => builder.n0_dns_pkarr_relay()
@@ -56,6 +59,8 @@ impl JuNode {
 			.json(&body)
 			.send()
 			.unwrap();
+
+		// match res statement
 		let bytes = res.json::<[u8;32]>().unwrap();
 		let pubkey = iroh::PublicKey::from_bytes(&bytes).unwrap();
 		println!("Got: {}", pubkey);
@@ -91,7 +96,7 @@ impl JuNode {
 		file.write_all(&secret_key.to_bytes())?;
 
 		Self::publish_publickey(&secret_key, String::from("Gabriel"));
-		Self::get_peer_publickey(String::from("Gabriel")); // TESTING
+		Self::get_peer_publickey(String::from("Test")); // TESTING
 
 		return Ok(secret_key)
 	}
@@ -173,7 +178,6 @@ impl JuNode {
 
 #[tokio::main]
 async fn main() {
-	//let args: Vec<String> = env::args().collect();
 	let node = JuNode::new(PkarrRelay::Disabled).await.unwrap();
 	// node.handle_connections().await;
 }

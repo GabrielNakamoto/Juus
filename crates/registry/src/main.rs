@@ -1,22 +1,12 @@
 use actix_web::middleware::Logger;
-use redb::{
-	Database,
-	ReadableTable,
-	TableDefinition,
-	AccessGuard
-};
+use redb::{Database, TableDefinition};
 use redb::Error as RedbError;
 use thiserror::Error;
-use actix_web::{web, App, HttpServer, Responder, HttpResponse, ResponseError,
-	http::{
-		StatusCode,
-		header::ContentType
-	}
-};
+use actix_web::{web, App, HttpServer, HttpResponse, ResponseError};
 use serde::{Deserialize, Serialize};
 use env_logger::Env;
 
-type PubKey = [u8;32];
+type PubKey = [u8; 32];
 const TABLE: TableDefinition<&str, PubKey> = TableDefinition::new("global-members");
 
 #[derive(Error, Debug)]
@@ -61,26 +51,14 @@ struct Member {
 	pubkey: PubKey
 }
 
-fn db_get_pubkey(db: &Database, stub: &web::Json<MemberStub>) -> Result<Option<PubKey>, RedbError> {
-	let txn = db.begin_read()?;
-	let table = txn.open_table(TABLE)?;
-
-	Ok(table.get(stub.name.as_str())?
-		.map(|v| v.value()))
-}
-
-fn db_set_pubkey(db: &Database, member: &web::Json<Member>) -> Result<(), RedbError> {
-	let txn = db.begin_write()?;
-	{
-		let mut table = txn.open_table(TABLE)?;
-		table.insert(member.name.as_str(), &member.pubkey)?;
-	}
-	txn.commit()?;
-	Ok(())
-}
-
 async fn get_pubkey(stub: web::Json<MemberStub>, data: web::Data<State>) -> Result<web::Json<PubKey>, AppError> {
-	let value = db_get_pubkey(&data.db, &stub)?;
+	let db = &data.db;
+	let txn = db.begin_read().map_err(RedbError::from)?;
+	let table = txn.open_table(TABLE).map_err(RedbError::from)?;
+
+	let value = table.get(stub.name.as_str())
+		.map_err(RedbError::from)?
+		.map(|v| v.value());
 
 	match value {
 		Some(v) => Ok(web::Json(v)),
@@ -89,7 +67,13 @@ async fn get_pubkey(stub: web::Json<MemberStub>, data: web::Data<State>) -> Resu
 }
 
 async fn set_pubkey(member: web::Json<Member>, data: web::Data<State>) -> Result<(), AppError> {
-	db_set_pubkey(&data.db, &member)?;
+	let db = &data.db;
+	let txn = db.begin_write().map_err(RedbError::from)?;
+	{
+		let mut table = txn.open_table(TABLE).map_err(RedbError::from)?;
+		table.insert(member.name.as_str(), &member.pubkey).map_err(RedbError::from)?;
+	}
+	txn.commit().map_err(RedbError::from)?;
 	Ok(())
 }
 

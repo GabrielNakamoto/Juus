@@ -8,6 +8,10 @@ Current crates:
 - `crates/registry`: centralized RESTful kv database for peer discovery
 
 
+## To work on
+- Safe and informative error handling
+- Seperate related logic
+
 ## Design questions
 - What should the main ui look like?
 - Figure out base functionality then add more features
