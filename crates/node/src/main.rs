@@ -1,5 +1,6 @@
 use iroh::{Endpoint, NodeAddr, SecretKey, RelayMode, RelayUrl,};
 use n0_snafu::ResultExt;
+use std::env;
 use rand::rngs::OsRng;
 use std::fs::File;
 use std::path::Path;
@@ -30,33 +31,42 @@ impl JuNode {
 		}
 	}
 
+	fn generate_secretkey(path: &Path, display: String) -> std::io::Result<iroh::SecretKey> {
+		println!("Generating new secret key...");
+		let secret_key = SecretKey::generate(&mut OsRng);
+		let mut file = match File::create(&path) {
+			Err(why) => panic!("couldn't create {}: {}", display, why),
+			Ok(file) => file
+		};
+		println!("Serializing secret key...");
+		file.write_all(&secret_key.to_bytes())?;
+
+		return Ok(secret_key)
+	}
+
 	fn deserialize_or_gen_secretkey() -> std::io::Result<iroh::SecretKey> {
 		let path = Path::new("secret");
 		let display = path.display();
 
 		if ! path.exists() {
-			println!("Generating new secret key...");
-			let secret_key = SecretKey::generate(&mut OsRng);
-			let mut file = match File::create(&path) {
-				Err(why) => panic!("couldn't create {}: {}", display, why),
-				Ok(file) => file
-			};
-			println!("Serializing secret key...");
-			file.write_all(&secret_key.to_bytes())?;
-
-			return Ok(secret_key)
+			return Self::generate_secretkey(&path, display.to_string());
 		}
 
 		let mut secret_file = match File::open(&path) {
 			Err(why) => panic!("couldn't open {}: {}", display, why),
 			Ok(file) => file
 		};
+
 		println!("Found secret key file...");
 		println!("Deserializing secret key...");
 
 		let mut buffer = [0; 32];
 		let n = secret_file.read(&mut buffer[..])?;
-		assert!(n == 32);
+
+		if n != 32 {
+			println!("Corrupted or invalid secret key");
+			return Self::generate_secretkey(&path, display.to_string());
+		}
 
 		Ok(iroh::SecretKey::from_bytes(&buffer))
 	}
@@ -71,7 +81,6 @@ impl JuNode {
 			.discovery(Self::build_discovery(relay))
 			.bind()
 			.await?;
-
 
 		Ok(Self {
 			secret_key,
@@ -109,6 +118,7 @@ impl JuNode {
 
 #[tokio::main]
 async fn main() {
+	//let args: Vec<String> = env::args().collect();
 	let node = JuNode::new(PkarrRelay::Disabled).await.unwrap();
 	node.handle_connections().await;
 }

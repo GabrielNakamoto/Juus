@@ -1,5 +1,10 @@
+html {
+	scroll-behaviour: smooth;
+}
+
 body {
-	background-color: #f0ead6;
+  background-color: white;
+	/*background-color: #f0ead6;*/
   font-family: "Rubik", sans-serif;
   font-style: normal;
   display: flex;
@@ -62,7 +67,6 @@ body {
 	/*flex-direction: column;*/
 	/*justify-content: flex-end;*/
 	flex-direction: column-reverse;
-	scroll-behaviour: smooth;
 	align-items: center;
 	gap: 20px;
 	/*outline: 2px solid red;*/

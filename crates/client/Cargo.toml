@@ -7,6 +7,7 @@ edition = "2024"
 dioxus = { version = "0.6.0", features = ["fullstack"] }
 axum = { version = "0.7", optional = true }
 tokio = { version = "1.47.1", features = ["full"], optional = true }
+reqwest = "0.12.23"
 
 [features]
 default = []

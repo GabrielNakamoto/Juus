@@ -9,6 +9,7 @@ static CSS: Asset = asset!("/assets/style.css");
 struct Member {
 	name: String
 }
+// Need display name + unique user id
 
 impl Member {
 	fn new(name: impl Into<String>) -> Self { 
@@ -95,8 +96,9 @@ fn App() -> Element {
     let mut state = use_signal(|| State {
 		user: Member::new("Gabriel"),
         messages: vec![
+			/*
 			user1.send_message("sams definitely dating meaghan."),
-			user2.send_message("yall seen markelys vsco?")
+			user2.send_message("yall seen markelys vsco?")*/
         ],
     });
 
