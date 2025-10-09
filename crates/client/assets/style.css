@@ -1,0 +1,97 @@
+body {
+	background-color: #f0ead6;
+  font-family: "Rubik", sans-serif;
+  font-style: normal;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 800px;
+  /*outline: 2px solid red;*/
+}
+
+.new-message {
+	border-radius: 10px;
+	padding: 10px;
+	width: 600px;
+	background-color: #5b516e;
+	display: flex;
+	flex-direction: row;
+}
+
+.submit-message {
+	color: white;
+	font-weight: bold;
+	background-color: #8f879c;
+	border-radius: 10px;
+	width: 80px;
+}
+
+.new-message > textarea {
+	width: 100%;
+	font-size: 15px;
+	color: white;
+	border: none;
+	/*border: 2px solid red;*/
+	background-color: transparent;
+}
+
+.new-message > textarea:focus {
+	outline: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* For IE and Edge */
+  scrollbar-width: none;     /* For Firefox */
+}
+
+/* For WebKit browsers (Chrome, Safari, Edge, Opera) */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.messages {
+	box-sizing: border-box;
+	border-radius: 10px;
+	overflow-y: auto;
+	position: relative;
+	padding: 40px;
+	height: 600px;
+	width: 700px;
+	background-color: #121212;
+	display: flex;
+	/*flex-direction: column;*/
+	/*justify-content: flex-end;*/
+	flex-direction: column-reverse;
+	scroll-behaviour: smooth;
+	align-items: center;
+	gap: 20px;
+	/*outline: 2px solid red;*/
+}
+
+.message {
+	/*padding: 10px;*/
+	color: white;
+	/*background-color: #252525;*/
+	background-color: #2b2043;
+	border-radius: 10px;
+	padding-left: 8px;
+	padding-right: 8px;
+	padding-top: 10px;
+	/*width: 100%;*/
+	width: 600px;
+	display: flex;
+	flex-direction: column;
+}
+
+.message-sender {
+	margin: 0px;
+	margin-bottom: 10px;
+	margin-left: 10px;
+	font-weight: bold;
+}
+
+.message-content {
+	margin: 0px;
+	margin-bottom: 10px;
+	margin-left: 10px;
+}

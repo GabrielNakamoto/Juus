@@ -1,0 +1,10 @@
+[package]
+name = "node"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+iroh = { version = "0.92.0", features = ["discovery-pkarr-dht"] }
+n0-snafu = "0.2.2"
+rand = "0.8"
+tokio = "1.47.1"
