@@ -1,10 +1,12 @@
 use iroh::{Endpoint, NodeAddr, SecretKey, RelayMode, RelayUrl,};
+use std::collections::HashMap;
 use n0_snafu::ResultExt;
 use std::env;
 use rand::rngs::OsRng;
 use std::fs::File;
 use std::path::Path;
 use std::io::{Read, Write};
+use serde::{Serialize, Deserialize};
 
 const JUUS_P2P_V0_ALPN: &[u8] = b"juus-p2p-v0";
 
@@ -14,12 +16,25 @@ enum PkarrRelay {
 	Iroh
 }
 
+/*
 struct JuPeer {
-}
+}*/
 
 struct JuNode {
 	secret_key: iroh::SecretKey,
 	endpoint: iroh::Endpoint,
+}
+
+#[derive(Serialize, Deserialize)]
+struct MemberStub {
+	name: String
+}
+
+#[derive(Serialize, Deserialize)]
+struct Member {
+	name: String,
+	#[serde(with = "serde_bytes")]
+	pubkey: [u8;32]
 }
 
 impl JuNode {
@@ -31,6 +46,40 @@ impl JuNode {
 		}
 	}
 
+	fn get_peer_publickey(username: String) -> iroh::PublicKey {
+		const REGISTRY_EP: &str = "http://localhost:8081/get";
+
+		println!("Fetching {}'s public key from: {}", username, REGISTRY_EP);
+		let client = reqwest::blocking::Client::new();
+		let body = MemberStub { name: username };
+		let res = client.get(REGISTRY_EP)
+			.json(&body)
+			.send()
+			.unwrap();
+		let bytes = res.json::<[u8;32]>().unwrap();
+		let pubkey = iroh::PublicKey::from_bytes(&bytes).unwrap();
+		println!("Got: {}", pubkey);
+
+		pubkey
+	}
+
+	fn publish_publickey(secret_key: &iroh::SecretKey, username: String) {
+		const REGISTRY_EP: &str = "http://localhost:8081/set";
+
+		println!("Publish public key to: {}", REGISTRY_EP);
+		let binding = secret_key.public();
+		let pubkey = binding.as_bytes();
+		let body = Member { name: username, pubkey: pubkey.clone() };
+		let client = reqwest::blocking::Client::new();
+		let res = client.post(REGISTRY_EP)
+			.json(&body)
+			.send()
+			.unwrap();
+
+		println!("Response status: {}", res.status());
+		println!("Response json: {}", res.text().unwrap());
+	}
+
 	fn generate_secretkey(path: &Path, display: String) -> std::io::Result<iroh::SecretKey> {
 		println!("Generating new secret key...");
 		let secret_key = SecretKey::generate(&mut OsRng);
@@ -40,6 +89,9 @@ impl JuNode {
 		};
 		println!("Serializing secret key...");
 		file.write_all(&secret_key.to_bytes())?;
+
+		Self::publish_publickey(&secret_key, String::from("Gabriel"));
+		Self::get_peer_publickey(String::from("Gabriel")); // TESTING
 
 		return Ok(secret_key)
 	}
@@ -72,7 +124,10 @@ impl JuNode {
 	}
 
 	async fn new(relay: PkarrRelay) -> n0_snafu::Result<Self> {
-		let secret_key = Self::deserialize_or_gen_secretkey().unwrap();
+		let secret_key = tokio::task::spawn_blocking(move || {
+			Self::deserialize_or_gen_secretkey().unwrap()
+		}).await.unwrap();
+
 		println!("Your public key is: {}", secret_key.public());
 
 		let endpoint = Endpoint::builder()
@@ -120,5 +175,5 @@ impl JuNode {
 async fn main() {
 	//let args: Vec<String> = env::args().collect();
 	let node = JuNode::new(PkarrRelay::Disabled).await.unwrap();
-	node.handle_connections().await;
+	// node.handle_connections().await;
 }

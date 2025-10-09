@@ -98,7 +98,7 @@ fn App() -> Element {
         messages: vec![
 			/*
 			user1.send_message("sams definitely dating meaghan."),
-			user2.send_message("yall seen markelys vsco?")*/
+			user2.send_message("yall seen marleys vsco?")*/
         ],
     });
 
@@ -119,6 +119,7 @@ fn ChatHistory(state: Signal<State>) -> Element {
 			div {
 				class: "new-message",
 				textarea {
+					class: "no-resize",
 					oninput: move |event| {
 						message.set(event.value());
 					},

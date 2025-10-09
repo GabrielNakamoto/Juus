@@ -1,4 +1,10 @@
-use redb::{Database, ReadableTable, TableDefinition};
+use actix_web::middleware::Logger;
+use redb::{
+	Database,
+	ReadableTable,
+	TableDefinition,
+	AccessGuard
+};
 use redb::Error as RedbError;
 use thiserror::Error;
 use actix_web::{web, App, HttpServer, Responder, HttpResponse, ResponseError,
@@ -8,16 +14,18 @@ use actix_web::{web, App, HttpServer, Responder, HttpResponse, ResponseError,
 	}
 };
 use serde::{Deserialize, Serialize};
-// use std::sync::Mutex;
+use env_logger::Env;
 
-const TABLE: TableDefinition<&str, [u8;32]> = TableDefinition::new("global-members");
+type PubKey = [u8;32];
+const TABLE: TableDefinition<&str, PubKey> = TableDefinition::new("global-members");
 
 #[derive(Error, Debug)]
 enum AppError {
 	#[error("Db op failed: {0}")]
 	Database(#[from] RedbError),
+
 	#[error("User not found: {0}")]
-	NotFound(String)
+	NotFound(String),
 }
 
 impl ResponseError for AppError {
@@ -50,33 +58,45 @@ struct MemberStub {
 struct Member {
 	name: String,
 	#[serde(with = "serde_bytes")]
-	pubkey: [u8; 32]
+	pubkey: PubKey
 }
 
-// TODO: error handling, custom error type? -> remove all `.unwrap()` calls
-async fn get_pubkey(stub: web::Json<MemberStub>, data: web::Data<State>) -> actix_web::Result<web::Json<[u8;32]>> {
-	let db = &data.db;
+fn db_get_pubkey(db: &Database, stub: &web::Json<MemberStub>) -> Result<Option<PubKey>, RedbError> {
+	let txn = db.begin_read()?;
+	let table = txn.open_table(TABLE)?;
 
-	let txn = db.begin_read().map_err(AppError::Database)?;
-	let table = txn.open_table(TABLE).unwrap();
-	let value = table.get(stub.name.as_str()).unwrap().unwrap().value();
-
-	Ok(web::Json(value))
+	Ok(table.get(stub.name.as_str())?
+		.map(|v| v.value()))
 }
 
-async fn set_pubkey(member: web::Json<Member>, data: web::Data<State>) -> actix_web::Result<()> {
-	let db = &data.db;
-	let txn = db.begin_write().unwrap();
+fn db_set_pubkey(db: &Database, member: &web::Json<Member>) -> Result<(), RedbError> {
+	let txn = db.begin_write()?;
 	{
-		let mut table = txn.open_table(TABLE).unwrap();
-		table.insert(member.name.as_str(), &member.pubkey).expect("Table should insert");
+		let mut table = txn.open_table(TABLE)?;
+		table.insert(member.name.as_str(), &member.pubkey)?;
 	}
-	txn.commit().unwrap();
+	txn.commit()?;
+	Ok(())
+}
+
+async fn get_pubkey(stub: web::Json<MemberStub>, data: web::Data<State>) -> Result<web::Json<PubKey>, AppError> {
+	let value = db_get_pubkey(&data.db, &stub)?;
+
+	match value {
+		Some(v) => Ok(web::Json(v)),
+		None => Err(AppError::NotFound(stub.name.clone()))
+	}
+}
+
+async fn set_pubkey(member: web::Json<Member>, data: web::Data<State>) -> Result<(), AppError> {
+	db_set_pubkey(&data.db, &member)?;
 	Ok(())
 }
 
 #[actix_web::main]
 async fn main() {
+	env_logger::init_from_env(Env::default().default_filter_or("info"));
+
 	let file = tempfile::NamedTempFile::new().unwrap();
 	let state = web::Data::new(State {
 		db: Database::create(file.path()).expect("Db create should work")
@@ -84,6 +104,7 @@ async fn main() {
 
 	HttpServer::new(move || {
 		App::new()
+			.wrap(Logger::default())
 			.app_data(state.clone())
 			.route("/get", web::get().to(get_pubkey))
 			.route("/set", web::post().to(set_pubkey))
