@@ -21,7 +21,7 @@ struct JuPeer {
 	pubkey: iroh::PublicKey
 }
 
-struct JuNode {
+pub struct JuNode {
 	secret_key: iroh::SecretKey,
 	endpoint: iroh::Endpoint,
 }
@@ -96,7 +96,7 @@ impl JuNode {
 		file.write_all(&secret_key.to_bytes())?;
 
 		Self::publish_publickey(&secret_key, String::from("Gabriel"));
-		Self::get_peer_publickey(String::from("Test")); // TESTING
+		// Self::get_peer_publickey(String::from("Test")); // TESTING
 
 		return Ok(secret_key)
 	}
@@ -174,10 +174,4 @@ impl JuNode {
 			});
 		}
 	}
-}
-
-#[tokio::main]
-async fn main() {
-	let node = JuNode::new(PkarrRelay::Disabled).await.unwrap();
-	// node.handle_connections().await;
 }

@@ -1,6 +1,27 @@
-[workspace]
-resolver = "3"
-members = ["crates/client", "crates/node", "crates/registry"]
+[package]
+name = "client"
+
+description = "A P2P group chat network"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+dioxus = { version = "0.6.0" }
+serde = { version = "1.0.228", optional = true }
+serde_bytes = { version = "0.11.19", optional = true }
+serde_json = { version = "1.0.145", optional = true }
+iroh = { version = "0.92.0", features = ["discovery-pkarr-dht"], optional = true }
+n0-snafu = { version = "0.2.2", optional = true }
+rand = { version = "0.8", optional = true }
+reqwest = { version = "0.12.23", features = ["blocking", "json"], optional = true }
+tokio = { version = "1.47.1", optional = true }
+
+
+[features]
+web = ["dioxus/web"]
+desktop = ["dioxus/desktop", "p2p"]
+mobile = ["dioxus/mobile", "p2p"]
+p2p = ["iroh", "n0-snafu", "rand", "reqwest", "tokio", "serde", "serde_bytes", "serde_json"]
 
 [profile]
 
@@ -13,3 +34,4 @@ inherits = "dev"
 
 [profile.android-dev]
 inherits = "dev"
+

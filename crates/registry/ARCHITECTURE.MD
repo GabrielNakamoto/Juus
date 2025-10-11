@@ -1,2 +1,0 @@
-- Actix for server request handling
-- redb for database implementation
